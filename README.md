@@ -268,25 +268,6 @@ Frontend runs at: **[http://localhost:3000](http://localhost:3000)**
 
 ---
 
-## 🚀 Deployment
-
-### ⚡ Recommended: Railway
-
-* Deploy backend and frontend separately
-* Use PostgreSQL in production
-
-Steps summarized:
-
-1. Push code to GitHub
-2. Connect Railway → Deploy backend (`backend` folder)
-3. Add PostgreSQL + environment variables
-4. Deploy frontend (`frontend` folder)
-5. Set `REACT_APP_API_URL=<backend-url>`
-
-Full guide in `DEPLOYMENT.md`.
-
----
-
 ## 🛠️ Troubleshooting
 
 ### Backend
@@ -325,6 +306,7 @@ Full guide in `DEPLOYMENT.md`.
 Educational / Demonstration project.
 
 ---
+
 
 
 
