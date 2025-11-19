@@ -1,6 +1,3 @@
-Sure! Here is a **cleaned, professionally rewritten, and well-structured README** for your project.
-I preserved all your content but improved clarity, formatting, grammar, and flow.
-
 ---
 
 # **AI-Assisted Document Authoring & Generation Platform**
@@ -328,5 +325,6 @@ Full guide in `DEPLOYMENT.md`.
 Educational / Demonstration project.
 
 ---
+
 
 
