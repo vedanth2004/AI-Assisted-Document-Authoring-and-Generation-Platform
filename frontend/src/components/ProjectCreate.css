@@ -1,0 +1,237 @@
+.project-create {
+  min-height: 100vh;
+  background: var(--bg-gradient);
+  transition: background 0.3s ease;
+}
+
+.create-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.create-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.create-subtitle {
+  margin: 0;
+  color: var(--gray);
+  font-size: 16px;
+}
+
+.create-form-card {
+  margin-bottom: 24px;
+}
+
+.optional {
+  color: var(--gray);
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.document-type-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.document-type-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+[data-theme="dark"] .document-type-select:focus {
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+}
+
+.ai-template-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  border: 2px solid var(--primary-light);
+  transition: background 0.3s ease;
+}
+
+[data-theme="dark"] .ai-template-section {
+  background: rgba(129, 140, 248, 0.1);
+}
+
+.ai-template-hint {
+  margin: 12px 0 0 0;
+  color: var(--gray);
+  font-size: 13px;
+  text-align: center;
+}
+
+.structure-builder-card {
+  margin-bottom: 32px;
+}
+
+.structure-header {
+  margin-bottom: 24px;
+}
+
+.structure-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.structure-subtitle {
+  margin: 0;
+  color: var(--gray);
+  font-size: 15px;
+}
+
+.structure-list {
+  margin-bottom: 24px;
+}
+
+.structure-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.structure-item:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-md);
+}
+
+.structure-number {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.structure-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.structure-input:focus {
+  outline: none;
+}
+
+.structure-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  transform: scale(1.1);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-icon-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--danger);
+}
+
+[data-theme="dark"] .btn-icon-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.2);
+}
+
+.structure-footer {
+  display: flex;
+  gap: 12px;
+}
+
+.create-actions {
+  margin-top: 32px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+.btn-large {
+  padding: 16px 32px;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .create-header {
+    flex-direction: column;
+  }
+
+  .structure-item {
+    flex-wrap: wrap;
+  }
+
+  .structure-input {
+    width: 100%;
+    order: 2;
+  }
+
+  .structure-actions {
+    order: 3;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+

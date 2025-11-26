@@ -107,42 +107,16 @@ FRONTEND_URL=https://your-frontend.railway.app
 
 ## Option 3: Render (Free Tier)
 
-### Backend on Render
+**📖 For detailed Render deployment guide, see [RENDER_DEPLOYMENT.md](../RENDER_DEPLOYMENT.md)**
 
-1. Go to [render.com](https://render.com) → Sign up
-2. "New +" → "Web Service"
-3. Connect GitHub → Select repo
-4. Configure:
-   - **Name**: `ai-document-backend`
-   - **Root Directory**: `backend`
-   - **Environment**: Python 3
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+### Quick Steps:
 
-5. **Add PostgreSQL**:
-   - "New +" → "PostgreSQL"
-   - Copy Internal Database URL
+1. **PostgreSQL**: "New +" → "PostgreSQL" → Get Internal Database URL
+2. **Backend**: "New +" → "Web Service" → Root: `backend` → Set env vars
+3. **Frontend**: "New +" → "Static Site" → Root: `frontend` → Set `REACT_APP_API_URL`
+4. **CORS**: Update `FRONTEND_URL` in backend after frontend deploys
 
-6. **Environment Variables**:
-   ```
-   SECRET_KEY=<random-string>
-   GEMINI_API_KEY=<your-key>
-   DATABASE_URL=<postgres-url>
-   ```
-
-### Frontend on Render
-
-1. "New +" → "Static Site"
-2. Connect GitHub → Select repo
-3. Configure:
-   - **Root Directory**: `frontend`
-   - **Build Command**: `npm install && npm run build`
-   - **Publish Directory**: `build`
-
-4. **Environment Variable**:
-   ```
-   REACT_APP_API_URL=https://your-backend.onrender.com
-   ```
+**See [RENDER_DEPLOYMENT.md](../RENDER_DEPLOYMENT.md) for complete step-by-step guide.**
 
 ---
 

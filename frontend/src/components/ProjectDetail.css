@@ -1,0 +1,135 @@
+.project-detail {
+  min-height: 100vh;
+  background: var(--bg-gradient);
+  transition: background 0.3s ease;
+}
+
+.project-detail-container {
+  padding: 32px;
+  max-width: 1800px;
+  margin: 0 auto;
+}
+
+.project-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 20px;
+  background: var(--bg-primary);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+.header-info {
+  flex: 1;
+}
+
+.project-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.project-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.project-topic {
+  color: var(--gray);
+  font-size: 14px;
+}
+
+.project-progress-section {
+  margin-bottom: 24px;
+  background: var(--bg-primary);
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+.project-detail-content {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  min-height: calc(100vh - 300px);
+}
+
+.project-detail-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.generate-all-section {
+  margin-top: auto;
+}
+
+.no-structure {
+  width: 100%;
+}
+
+.export-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 50px;
+  box-shadow: var(--shadow-xl);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 100;
+  transition: all 0.3s ease;
+}
+
+.export-fab:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 12px 24px rgba(16, 185, 129, 0.4);
+}
+
+@media (max-width: 1024px) {
+  .project-detail-content {
+    flex-direction: column;
+  }
+
+  .project-detail-main {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .project-detail-container {
+    padding: 16px;
+  }
+
+  .project-detail-header {
+    flex-direction: column;
+  }
+
+  .export-fab {
+    bottom: 20px;
+    right: 20px;
+    padding: 14px 20px;
+    font-size: 14px;
+  }
+}
+

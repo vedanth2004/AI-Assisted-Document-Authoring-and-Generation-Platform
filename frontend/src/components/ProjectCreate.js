@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../services/api';
+import Navbar from './layout/Navbar';
+import LoadingSpinner from './ui/LoadingSpinner';
+import './ProjectCreate.css';
 
 function ProjectCreate() {
   const [title, setTitle] = useState('');
@@ -9,10 +13,10 @@ function ProjectCreate() {
   const [topic, setTopic] = useState('');
   const [structure, setStructure] = useState(['']);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [generatingTemplate, setGeneratingTemplate] = useState(false);
   
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { success, error: showError } = useToast();
   const navigate = useNavigate();
 
   const handleAddItem = () => {
@@ -49,13 +53,12 @@ function ProjectCreate() {
 
   const handleGenerateTemplate = async () => {
     if (!topic.trim()) {
-      alert('Please enter a topic first');
+      showError('Please enter a topic first');
       return;
     }
 
     setGeneratingTemplate(true);
     try {
-      // First create project with topic
       const projectResponse = await api.post('/api/projects', {
         title: title || 'Untitled Project',
         document_type: documentType,
@@ -64,7 +67,6 @@ function ProjectCreate() {
 
       const projectId = projectResponse.data.id;
 
-      // Generate AI template
       const templateResponse = await api.post(`/api/generation/generate-template?project_id=${projectId}`);
       const generatedStructure = templateResponse.data.structure_data;
 
@@ -73,34 +75,30 @@ function ProjectCreate() {
         setTitle('Untitled Project');
       }
 
-      // Save the structure
       await api.post(`/api/projects/${projectId}/structure`, {
         structure_data: generatedStructure
       });
 
-      navigate(`/projects/${projectId}`);
+      success('AI template generated successfully!');
+      setTimeout(() => navigate(`/projects/${projectId}`), 1000);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to generate template');
-    } finally {
+      showError(err.response?.data?.detail || 'Failed to generate template. Please try again.');
       setGeneratingTemplate(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     
-    // Validate structure
     const validStructure = structure.filter(s => s.trim());
     if (validStructure.length === 0) {
-      setError('Please add at least one section/slide');
+      showError('Please add at least one section/slide');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Create project
       const projectResponse = await api.post('/api/projects', {
         title: title || 'Untitled Project',
         document_type: documentType,
@@ -109,36 +107,38 @@ function ProjectCreate() {
 
       const projectId = projectResponse.data.id;
 
-      // Save structure
       await api.post(`/api/projects/${projectId}/structure`, {
         structure_data: validStructure
       });
 
-      navigate(`/projects/${projectId}`);
+      success('Project created successfully!');
+      setTimeout(() => navigate(`/projects/${projectId}`), 1000);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to create project');
-    } finally {
+      showError(err.response?.data?.detail || 'Failed to create project. Please try again.');
       setLoading(false);
     }
   };
 
+  if (!user) return null;
+
   return (
-    <div>
-      <Navbar user={user} logout={logout} />
+    <div className="project-create">
+      <Navbar />
       <div className="container">
-        <div style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px', background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-            ✨ Create New Project
-          </h2>
-          <Link to="/dashboard" className="btn btn-secondary" style={{ marginTop: '12px' }}>
+        <div className="create-header">
+          <div>
+            <h2 className="create-title">✨ Create New Project</h2>
+            <p className="create-subtitle">Set up your document structure and start generating content</p>
+          </div>
+          <Link to="/dashboard" className="btn btn-secondary">
             ← Back to Dashboard
           </Link>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="card">
+          <div className="card create-form-card">
             <div className="form-group">
-              <label>Project Title</label>
+              <label>Project Title <span className="optional">(optional)</span></label>
               <input
                 type="text"
                 value={title}
@@ -152,95 +152,107 @@ function ProjectCreate() {
               <select
                 value={documentType}
                 onChange={(e) => setDocumentType(e.target.value)}
+                className="document-type-select"
               >
-                <option value="docx">Microsoft Word (.docx)</option>
-                <option value="pptx">Microsoft PowerPoint (.pptx)</option>
+                <option value="docx">📄 Microsoft Word (.docx)</option>
+                <option value="pptx">📊 Microsoft PowerPoint (.pptx)</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label>Main Topic</label>
+              <label>Main Topic *</label>
               <textarea
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="Enter the main topic or prompt for your document (e.g., 'A market analysis of the EV industry in 2025')"
                 required
+                rows="4"
               />
             </div>
 
-            <div style={{ marginTop: '24px', padding: '20px', background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', borderRadius: '10px', border: '2px solid var(--primary-light)' }}>
+            <div className="ai-template-section">
               <button
                 type="button"
-                className="btn btn-success"
+                className="btn btn-success btn-block"
                 onClick={handleGenerateTemplate}
                 disabled={generatingTemplate || !topic.trim()}
-                style={{ width: '100%', marginBottom: '12px' }}
               >
                 {generatingTemplate ? (
-                  <>⚡ Generating AI Outline...</>
+                  <>
+                    <LoadingSpinner size="small" inline />
+                    Generating AI Outline...
+                  </>
                 ) : (
                   <>✨ AI-Suggest Outline</>
                 )}
               </button>
-              <p style={{ margin: 0, color: 'var(--gray)', fontSize: '14px', textAlign: 'center' }}>
-                🤖 Let AI generate an outline based on your topic
+              <p className="ai-template-hint">
+                🤖 Let AI generate an outline based on your topic. You can edit it afterward.
               </p>
             </div>
           </div>
 
-          <div className="card structure-builder">
-            <h3 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px', background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              {documentType === 'docx' ? '📑 Document Outline' : '📊 Slide Titles'}
-            </h3>
-            <p style={{ color: 'var(--gray)', marginBottom: '24px', fontSize: '15px' }}>
-              {documentType === 'docx'
-                ? 'Add section headers for your document'
-                : 'Add titles for each slide'}
-            </p>
+          <div className="card structure-builder-card">
+            <div className="structure-header">
+              <h3 className="structure-title">
+                {documentType === 'docx' ? '📑 Document Outline' : '📊 Slide Titles'}
+              </h3>
+              <p className="structure-subtitle">
+                {documentType === 'docx'
+                  ? 'Add section headers for your document'
+                  : 'Add titles for each slide'}
+              </p>
+            </div>
 
-            {structure.map((item, index) => (
-              <div key={index} className="structure-item">
-                <input
-                  type="text"
-                  value={item}
-                  onChange={(e) => handleStructureChange(index, e.target.value)}
-                  placeholder={
-                    documentType === 'docx'
-                      ? `Section ${index + 1} title`
-                      : `Slide ${index + 1} title`
-                  }
-                />
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => handleMoveUp(index)}
-                  disabled={index === 0}
-                  title="Move up"
-                >
-                  ⬆️
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => handleMoveDown(index)}
-                  disabled={index === structure.length - 1}
-                  title="Move down"
-                >
-                  ⬇️
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-danger"
-                  onClick={() => handleRemoveItem(index)}
-                  disabled={structure.length === 1}
-                  title="Remove"
-                >
-                  🗑️
-                </button>
-              </div>
-            ))}
+            <div className="structure-list">
+              {structure.map((item, index) => (
+                <div key={index} className="structure-item">
+                  <span className="structure-number">{index + 1}</span>
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => handleStructureChange(index, e.target.value)}
+                    placeholder={
+                      documentType === 'docx'
+                        ? `Section ${index + 1} title`
+                        : `Slide ${index + 1} title`
+                    }
+                    className="structure-input"
+                  />
+                  <div className="structure-actions">
+                    <button
+                      type="button"
+                      className="btn-icon"
+                      onClick={() => handleMoveUp(index)}
+                      disabled={index === 0}
+                      title="Move up"
+                    >
+                      ⬆️
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-icon"
+                      onClick={() => handleMoveDown(index)}
+                      disabled={index === structure.length - 1}
+                      title="Move down"
+                    >
+                      ⬇️
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-icon btn-icon-danger"
+                      onClick={() => handleRemoveItem(index)}
+                      disabled={structure.length === 1}
+                      title="Remove"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-            <div className="structure-actions">
+            <div className="structure-footer">
               <button
                 type="button"
                 className="btn btn-primary"
@@ -251,17 +263,17 @@ function ProjectCreate() {
             </div>
           </div>
 
-          {error && <div className="error">{error}</div>}
-
-          <div style={{ marginTop: '32px' }}>
+          <div className="create-actions">
             <button
               type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-              style={{ width: '100%', fontSize: '16px', padding: '14px 28px' }}
+              className="btn btn-primary btn-large btn-block"
+              disabled={loading || generatingTemplate}
             >
               {loading ? (
-                <>⚡ Creating Project...</>
+                <>
+                    <LoadingSpinner size="small" inline />
+                    Creating Project...
+                </>
               ) : (
                 <>✨ Create Project</>
               )}
@@ -273,20 +285,4 @@ function ProjectCreate() {
   );
 }
 
-function Navbar({ user, logout }) {
-  return (
-    <div className="navbar">
-      <h1>AI Document Authoring Platform</h1>
-      <div className="navbar-user">
-        <span>Welcome, {user?.username}</span>
-        <Link to="/dashboard">Dashboard</Link>
-        <button className="btn btn-secondary" onClick={logout}>
-          Logout
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default ProjectCreate;
-

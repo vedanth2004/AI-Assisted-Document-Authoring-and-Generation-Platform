@@ -1,67 +1,68 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import api from '../services/api';
+import Navbar from './layout/Navbar';
+import SectionSidebar from './project/SectionSidebar';
+import SectionEditor from './project/SectionEditor';
+import ProgressBar from './ui/ProgressBar';
+import Badge from './ui/Badge';
+import LoadingSpinner from './ui/LoadingSpinner';
+import Modal from './ui/Modal';
+import './ProjectDetail.css';
 
 function ProjectDetail() {
   const { id } = useParams();
   const [project, setProject] = useState(null);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [generating, setGenerating] = useState(false);
-  const [generatingSection, setGeneratingSection] = useState(null); // Track which section is being generated
+  const [generatingSection, setGeneratingSection] = useState(null);
   const [refiningSectionId, setRefiningSectionId] = useState(null);
   const [refinementPrompts, setRefinementPrompts] = useState({});
   const [comments, setComments] = useState({});
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   
-  const { user, logout } = useAuth();
+  const { success, error: showError } = useToast();
 
-  useEffect(() => {
-    fetchProject();
-    fetchSections();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       const response = await api.get(`/api/projects/${id}`);
       setProject(response.data);
     } catch (err) {
-      setError('Failed to load project');
+      showError('Failed to load project');
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, showError]);
 
-  const fetchSections = async () => {
+  const fetchSections = useCallback(async () => {
     try {
       const response = await api.get(`/api/documents/${id}/sections`);
-      setSections(response.data);
+      setSections(response.data || []);
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchProject();
+    fetchSections();
+  }, [fetchProject, fetchSections]);
 
   const handleGenerateSection = async (sectionIndex) => {
     setGeneratingSection(sectionIndex);
-    setError('');
-
     try {
-      console.log(`Generating section ${sectionIndex} for project:`, id);
-      const response = await api.post(
+      await api.post(
         `/api/generation/generate-section?project_id=${parseInt(id)}&section_index=${sectionIndex}`,
         {}
       );
-      
-      console.log('Section generation response:', response.data);
-      
-      // Refresh sections to show generated content
       await fetchSections();
+      success(`Section ${sectionIndex + 1} generated successfully!`);
     } catch (err) {
-      console.error('Section generation error:', err);
-      setError(err.response?.data?.detail || err.message || `Failed to generate section ${sectionIndex + 1}`);
+      showError(err.response?.data?.detail || `Failed to generate section ${sectionIndex + 1}`);
     } finally {
       setGeneratingSection(null);
     }
@@ -71,50 +72,35 @@ function ProjectDetail() {
     if (!project || !project.structure) return;
     
     setGenerating(true);
-    setError('');
-
     const structure = project.structure.structure_data || [];
-    const generatedSections = [];
-    const failedSections = [];
+    let successCount = 0;
+    let failCount = 0;
 
     try {
-      // Generate sections one by one
       for (let i = 0; i < structure.length; i++) {
         setGeneratingSection(i);
-        
         try {
-          console.log(`Generating section ${i} of ${structure.length}`);
           await api.post(
             `/api/generation/generate-section?project_id=${parseInt(id)}&section_index=${i}`,
             {}
           );
-          
-          generatedSections.push(i);
-          // Refresh after each successful generation
           await fetchSections();
-          
-          // Small delay to prevent rate limiting
+          successCount++;
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (err) {
+          failCount++;
           console.error(`Error generating section ${i}:`, err);
-          failedSections.push(i);
         }
       }
 
-      if (generatedSections.length > 0) {
-        setError('');
-        // Refresh one final time
-        await fetchSections();
+      if (successCount > 0) {
+        success(`Generated ${successCount} section${successCount > 1 ? 's' : ''} successfully!`);
       }
-      
-      if (failedSections.length > 0) {
-        setError(`Generated ${generatedSections.length} sections. Failed to generate ${failedSections.length} section(s).`);
-      } else if (generatedSections.length === 0) {
-        setError('No content was generated. Please check the backend logs for errors.');
+      if (failCount > 0) {
+        showError(`Failed to generate ${failCount} section${failCount > 1 ? 's' : ''}`);
       }
     } catch (err) {
-      console.error('Generation error:', err);
-      setError(err.response?.data?.detail || err.message || 'Failed to generate content');
+      showError('Failed to generate content');
     } finally {
       setGenerating(false);
       setGeneratingSection(null);
@@ -124,24 +110,22 @@ function ProjectDetail() {
   const handleRefine = async (sectionId) => {
     const prompt = refinementPrompts[sectionId];
     if (!prompt || !prompt.trim()) {
-      alert('Please enter a refinement prompt');
+      showError('Please enter a refinement prompt');
       return;
     }
 
     setRefiningSectionId(sectionId);
-    setError('');
-
     try {
       await api.post('/api/refinement/refine', {
         project_id: parseInt(id),
         section_id: sectionId,
         refinement_prompt: prompt
       });
-
       setRefinementPrompts({ ...refinementPrompts, [sectionId]: '' });
       await fetchSections();
+      success('Content refined successfully!');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to refine content');
+      showError(err.response?.data?.detail || 'Failed to refine content');
     } finally {
       setRefiningSectionId(null);
     }
@@ -149,7 +133,6 @@ function ProjectDetail() {
 
   const handleFeedback = async (sectionId, feedback) => {
     const comment = comments[sectionId] || '';
-
     try {
       await api.post('/api/refinement/feedback', {
         project_id: parseInt(id),
@@ -157,11 +140,10 @@ function ProjectDetail() {
         feedback: feedback,
         comment: comment
       });
-
       setComments({ ...comments, [sectionId]: '' });
-      alert('Feedback submitted successfully!');
+      success(`Feedback submitted! Thank you for your ${feedback}.`);
     } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to submit feedback');
+      showError(err.response?.data?.detail || 'Failed to submit feedback');
     }
   };
 
@@ -171,7 +153,6 @@ function ProjectDetail() {
         responseType: 'blob'
       });
 
-      // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -189,26 +170,48 @@ function ProjectDetail() {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      success('Document exported successfully!');
+      setExportModalOpen(false);
     } catch (err) {
-      alert(err.response?.data?.detail || 'Failed to export document');
+      showError(err.response?.data?.detail || 'Failed to export document');
     }
   };
 
-  const getSectionContent = (sectionIndex) => {
-    const section = sections.find(s => s.section_index === sectionIndex);
-    return section?.content || '';
+  const handleAddSection = async (title) => {
+    try {
+      await api.post(`/api/documents/${id}/sections`, {
+        title: title
+      });
+      await fetchProject();
+      await fetchSections();
+      // Select the newly added section
+      const newStructure = project.structure?.structure_data || [];
+      setCurrentSectionIndex(newStructure.length - 1);
+      success(`Section "${title}" added successfully!`);
+    } catch (err) {
+      showError(err.response?.data?.detail || 'Failed to add section');
+      throw err;
+    }
   };
 
-  const getSectionId = (sectionIndex) => {
-    const section = sections.find(s => s.section_index === sectionIndex);
-    return section?.id || null;
+  const getSectionData = (index) => {
+    return sections.find(s => s.section_index === index);
+  };
+
+  const getProgress = () => {
+    if (!project || !project.structure) return 0;
+    const total = project.structure.structure_data?.length || 0;
+    const generated = sections.filter(s => s.content).length;
+    return total > 0 ? (generated / total) * 100 : 0;
   };
 
   if (loading) {
     return (
       <div>
-        <Navbar user={user} logout={logout} />
-        <div className="loading">Loading...</div>
+        <Navbar />
+        <LoadingSpinner fullScreen text="Loading project..." />
       </div>
     );
   }
@@ -216,7 +219,7 @@ function ProjectDetail() {
   if (!project) {
     return (
       <div>
-        <Navbar user={user} logout={logout} />
+        <Navbar />
         <div className="container">
           <div className="error">Project not found</div>
           <Link to="/dashboard" className="btn btn-secondary">Back to Dashboard</Link>
@@ -226,19 +229,24 @@ function ProjectDetail() {
   }
 
   const structure = project.structure?.structure_data || [];
+  const currentSection = structure[currentSectionIndex];
+  const currentSectionData = getSectionData(currentSectionIndex);
+  const currentSectionId = currentSectionData?.id || null;
+  const currentContent = currentSectionData?.content || '';
+  const hasContent = !!currentContent;
 
   return (
-    <div>
-      <Navbar user={user} logout={logout} />
-      <div className="container">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '20px' }}>
-          <div>
-            <h2 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '12px', background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              📄 {project.title}
-            </h2>
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-              <span className="badge badge-primary">{project.document_type.toUpperCase()}</span>
-              <span style={{ color: 'var(--gray)', fontSize: '15px' }}>
+    <div className="project-detail">
+      <Navbar />
+      <div className="project-detail-container">
+        <div className="project-detail-header">
+          <div className="header-info">
+            <h2 className="project-title">{project.title}</h2>
+            <div className="project-meta">
+              <Badge variant="primary" size="medium">
+                {project.document_type.toUpperCase()}
+              </Badge>
+              <span className="project-topic">
                 <strong>Topic:</strong> {project.topic}
               </span>
             </div>
@@ -248,190 +256,114 @@ function ProjectDetail() {
           </Link>
         </div>
 
-        {error && <div className="error">{error}</div>}
-
-        {/* Generate Content Section */}
-        {sections.length === 0 && (
-          <div className="card" style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', border: '2px solid var(--primary-light)' }}>
-            <h3 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px', color: 'var(--dark)' }}>✨ Content Generation</h3>
-            <p style={{ marginBottom: '24px', fontSize: '15px', color: 'var(--gray)' }}>
-              No content has been generated yet. Click the button below to generate content for all sections.
-            </p>
-            <button
-              className="btn btn-primary"
-              onClick={handleGenerateAll}
-              disabled={generating}
-            >
-              {generating ? (
-                <>
-                  <span className="loading-text">⚡ Generating...</span>
-                  {generatingSection !== null && ` (Section ${generatingSection + 1} of ${structure.length})`}
-                </>
-              ) : (
-                <>✨ Generate All Content</>
-              )}
-            </button>
-            <p style={{ marginTop: '16px', color: 'var(--gray)', fontSize: '14px' }}>
-              💡 Or generate individual sections below for better control
-            </p>
+        {structure.length > 0 && (
+          <div className="project-progress-section">
+            <ProgressBar
+              value={getProgress()}
+              max={100}
+              label={`${sections.filter(s => s.content).length} of ${structure.length} sections generated`}
+              variant={getProgress() === 100 ? 'success' : 'primary'}
+            />
           </div>
         )}
 
-        {/* Sections */}
-        {structure.map((title, index) => {
-          const sectionId = getSectionId(index);
-          const content = getSectionContent(index);
-          const hasContent = !!content;
+        <div className="project-detail-content">
+          {structure.length > 0 ? (
+            <>
+              <SectionSidebar
+                sections={structure}
+                currentIndex={currentSectionIndex}
+                onSelectSection={setCurrentSectionIndex}
+                documentType={project.document_type}
+                sectionsData={sections}
+                onAddSection={handleAddSection}
+              />
+              
+              <div className="project-detail-main">
+                <SectionEditor
+                  sectionIndex={currentSectionIndex}
+                  sectionTitle={currentSection || `Untitled ${project.document_type === 'docx' ? 'Section' : 'Slide'}`}
+                  sectionId={currentSectionId}
+                  content={currentContent}
+                  documentType={project.document_type}
+                  isGenerating={generatingSection === currentSectionIndex}
+                  isRefining={refiningSectionId === currentSectionId}
+                  refinementPrompt={refinementPrompts[currentSectionId] || ''}
+                  onRefinementPromptChange={(value) =>
+                    setRefinementPrompts({ ...refinementPrompts, [currentSectionId]: value })
+                  }
+                  comment={comments[currentSectionId] || ''}
+                  onCommentChange={(value) =>
+                    setComments({ ...comments, [currentSectionId]: value })
+                  }
+                  onGenerate={handleGenerateSection}
+                  onRefine={handleRefine}
+                  onFeedback={handleFeedback}
+                  hasContent={hasContent}
+                />
 
-          return (
-            <div key={index} className="card section-item">
-              <h4>
-                {project.document_type === 'docx' ? `Section ${index + 1}: ` : `Slide ${index + 1}: `}
-                {title}
-              </h4>
-
-              {hasContent ? (
-                <>
-                  <div className="section-content" style={{ position: 'relative' }}>
-                    {content}
-                  </div>
-
-                  {/* Refinement Controls */}
-                  <div className="refinement-controls">
-                    <div className="refinement-input">
-                      <input
-                        type="text"
-                        placeholder="Enter refinement prompt (e.g., 'Make this more formal', 'Convert to bullet points', 'Shorten to 100 words')"
-                        value={refinementPrompts[sectionId] || ''}
-                        onChange={(e) =>
-                          setRefinementPrompts({
-                            ...refinementPrompts,
-                            [sectionId]: e.target.value
-                          })
-                        }
-                      />
+                {sections.length === 0 && (
+                  <div className="generate-all-section">
+                    <div className="card">
+                      <h3>🚀 Generate All Content</h3>
+                      <p>Generate content for all sections at once</p>
                       <button
                         className="btn btn-primary"
-                        onClick={() => handleRefine(sectionId)}
-                        disabled={refiningSectionId === sectionId}
+                        onClick={handleGenerateAll}
+                        disabled={generating}
                       >
-                        {refiningSectionId === sectionId ? (
-                          <>⚡ Refining...</>
+                        {generating ? (
+                          <>
+                            <LoadingSpinner size="small" inline />
+                            Generating... {generatingSection !== null && `(Section ${generatingSection + 1} of ${structure.length})`}
+                          </>
                         ) : (
-                          <>✨ Refine</>
+                          <>✨ Generate All Content</>
                         )}
                       </button>
                     </div>
-
-                    {/* Feedback Controls */}
-                    <div className="feedback-controls">
-                      <button
-                        className="btn btn-success"
-                        onClick={() => handleFeedback(sectionId, 'like')}
-                        style={{ minWidth: '120px' }}
-                      >
-                        👍 Like
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        onClick={() => handleFeedback(sectionId, 'dislike')}
-                        style={{ minWidth: '120px' }}
-                      >
-                        👎 Dislike
-                      </button>
-                    </div>
-
-                    {/* Comment Box */}
-                    <div className="comment-box">
-                      <textarea
-                        placeholder="Add a comment or note..."
-                        value={comments[sectionId] || ''}
-                        onChange={(e) =>
-                          setComments({
-                            ...comments,
-                            [sectionId]: e.target.value
-                          })
-                        }
-                      />
-                    </div>
                   </div>
-                </>
-              ) : (
-                <div style={{ padding: '24px', textAlign: 'center', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', borderRadius: '8px', border: '2px dashed #f59e0b' }}>
-                  <p style={{ color: 'var(--warning)', fontStyle: 'italic', marginBottom: '16px', fontWeight: 500 }}>
-                    ⏳ Content not generated yet.
-                  </p>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => handleGenerateSection(index)}
-                    disabled={generatingSection === index || generating}
-                  >
-                    {generatingSection === index ? (
-                      <>⚡ Generating...</>
-                    ) : (
-                      <>✨ Generate This Section</>
-                    )}
-                  </button>
-                </div>
-              )}
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="no-structure">
+              <div className="card">
+                <h3>No Structure Defined</h3>
+                <p>This project doesn't have a structure yet. Please add sections or slides.</p>
+              </div>
             </div>
-          );
-        })}
+          )}
+        </div>
 
-        {/* Regenerate All Button */}
         {sections.length > 0 && (
-          <div className="card">
-            <button
-              className="btn btn-secondary"
-              onClick={handleGenerateAll}
-              disabled={generating}
-            >
-              {generating ? (
-                <>⚡ Regenerating... {generatingSection !== null && `(Section ${generatingSection + 1} of ${structure.length})`}</>
-              ) : (
-                <>🔄 Regenerate All Content</>
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Export Section */}
-        {sections.length > 0 && (
-          <div className="export-section">
-            <div className="card">
-              <h3 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px', color: 'var(--dark)' }}>📥 Export Document</h3>
-              <p style={{ marginBottom: '24px', fontSize: '15px', color: 'var(--gray)' }}>
-                Download your completed document in {project.document_type.toUpperCase()} format.
-              </p>
-              <button
-                className="btn btn-success"
-                onClick={handleExport}
-                style={{ fontSize: '16px', padding: '14px 28px' }}
-              >
-                📥 Export {project.document_type.toUpperCase()}
-              </button>
-            </div>
+          <div className="export-fab" onClick={() => setExportModalOpen(true)}>
+            📥 Export
           </div>
         )}
       </div>
-    </div>
-  );
-}
 
-function Navbar({ user, logout }) {
-  return (
-    <div className="navbar">
-      <h1>AI Document Authoring Platform</h1>
-      <div className="navbar-user">
-        <span>Welcome, {user?.username}</span>
-        <Link to="/dashboard">Dashboard</Link>
-        <button className="btn btn-secondary" onClick={logout}>
-          Logout
-        </button>
-      </div>
+      <Modal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        title="Export Document"
+        size="small"
+      >
+        <p>Export your document as <strong>{project.document_type.toUpperCase()}</strong> format.</p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setExportModalOpen(false)}
+          >
+            Cancel
+          </button>
+          <button className="btn btn-success" onClick={handleExport}>
+            📥 Export {project.document_type.toUpperCase()}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
 
 export default ProjectDetail;
-

@@ -83,48 +83,16 @@ Railway can deploy both frontend and backend, and provides PostgreSQL.
 
 ## 🌐 Option 2: Render (Great Free Tier)
 
-### Backend Deployment on Render
+**📖 For detailed step-by-step Render deployment instructions, see [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md)**
 
-1. **Create New Web Service**
-   - Go to [Render Dashboard](https://dashboard.render.com)
-   - Click "New +" → "Web Service"
-   - Connect your GitHub repository
+### Quick Summary:
 
-2. **Configure Backend Service**
-   - Name: `ai-document-backend`
-   - Environment: `Python 3`
-   - Root Directory: `backend`
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-   - Instance Type: Free (or Paid for better performance)
+1. **Deploy PostgreSQL Database** → Get Internal Database URL
+2. **Deploy Backend** (Web Service) → Set environment variables
+3. **Deploy Frontend** (Static Site) → Set `REACT_APP_API_URL`
+4. **Update CORS** → Set `FRONTEND_URL` in backend
 
-3. **Add PostgreSQL Database**
-   - "New +" → "PostgreSQL"
-   - Name: `ai-document-db`
-   - Plan: Free (or Paid)
-   - Copy `Internal Database URL`
-
-4. **Set Environment Variables**
-   ```
-   SECRET_KEY=your-random-secret-key-here
-   GEMINI_API_KEY=your-gemini-api-key
-   DATABASE_URL=<from-postgres-service>
-   ```
-
-5. **Update CORS in Backend**
-   - Update `main.py` to allow Render frontend URL
-
-### Frontend Deployment on Render
-
-1. **Create Static Site**
-   - "New +" → "Static Site"
-   - Connect GitHub repository
-   - Root Directory: `frontend`
-   - Build Command: `npm install && npm run build`
-   - Publish Directory: `build`
-
-2. **Set Environment Variables**
-   - `REACT_APP_API_URL=https://your-backend.onrender.com`
+See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for complete instructions.
 
 ---
 
